@@ -1,0 +1,18 @@
+#!/bin/sh
+# Run every test/*.test.js under macOS's JavaScriptCore shell.
+#
+# jsc ships with the OS, so the suite needs no Node, no npm and no
+# network. Tests import the same ES modules the browser loads, so what
+# passes here is exactly what runs on the page.
+JSC=${JSC:-/System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc}
+if [ ! -x "$JSC" ]; then
+  echo "run-tests: no JavaScriptCore shell at $JSC" >&2
+  exit 127
+fi
+cd "$(dirname "$0")" || exit 1
+status=0
+for suite in test/*.test.js; do
+  [ -e "$suite" ] || { echo "no tests found"; exit 1; }
+  "$JSC" -m "$suite" || status=1
+done
+exit $status
