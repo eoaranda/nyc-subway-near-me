@@ -237,7 +237,12 @@ function stopTime(buf) {
   return stopId && when !== null ? [stopId, when] : null;
 }
 
-/* [feedTimestamp, arrivals] from one GTFS-Realtime feed body.
+/* [feedTimestamp, trips] from one GTFS-Realtime feed body.
+ *
+ * A trip is a train: its route and the stops it still has to make, in
+ * order. The stop list is the reason this is worth keeping rather than
+ * flattening on the spot -- it is what lets the board answer "where
+ * does this train go next" without asking the network again.
  *
  * Trip updates with no route or no usable stop times are skipped
  * rather than throwing: a single malformed entity should cost you one
@@ -245,7 +250,7 @@ function stopTime(buf) {
  */
 export function parseFeed(data) {
   let timestamp = null;
-  const arrivals = [];
+  const trips = [];
   for (const [field, value] of readFields(data)) {
     if (field === 1) {
       timestamp = first(value, 3);
@@ -260,15 +265,34 @@ export function parseFeed(data) {
           if (routeId !== null) route = decodeUtf8(routeId);
         } else if (number === 2) {
           const stop = stopTime(inner);
-          if (stop) stops.push(stop);
+          if (stop) stops.push({ stopId: stop[0], when: stop[1] });
         }
       }
-      if (!route) continue;
-      for (const [stopId, when] of stops) arrivals.push({ route, stopId, when });
+      if (!route || !stops.length) continue;
+      trips.push({ route, stops });
     }
   }
-  return [timestamp, arrivals];
+  return [timestamp, trips];
 }
+
+/* Every stop of every trip, as one flat list.
+ *
+ * Each arrival points back at the trip it belongs to and the index it
+ * sits at, so the stops still ahead of it are `trip.stops.slice(at + 1)`.
+ * The trip object is shared, not copied -- five thousand arrivals
+ * reference a few hundred trips.
+ */
+export function arrivalsOf(trips) {
+  const arrivals = [];
+  for (const trip of trips) {
+    trip.stops.forEach((stop, at) => {
+      arrivals.push({ route: trip.route, stopId: stop.stopId,
+                      when: stop.when, trip, at });
+    });
+  }
+  return arrivals;
+}
+
 
 /* == BOARD ============================================================== */
 
@@ -312,16 +336,22 @@ export function stationView(place, arrivals, now) {
       const heading = suffix === "N" ? station.north : station.south;
       const key = JSON.stringify([arrival.route, heading]);
       const found = byHeading.get(key);
-      if (found) found.minutes.push(minutes);
-      else byHeading.set(key, { route: arrival.route, heading, minutes: [minutes] });
+      if (found) found.trains.push({ minutes, arrival });
+      else byHeading.set(key, { route: arrival.route, heading,
+                                trains: [{ minutes, arrival }] });
     }
   }
 
-  const departures = [...byHeading.values()].map((each) => ({
-    route: each.route,
-    heading: each.heading,
-    minutes: each.minutes.sort((a, b) => a - b).slice(0, MAX_COUNTDOWNS),
-  }));
+  const departures = [...byHeading.values()].map((each) => {
+    each.trains.sort((a, b) => a.minutes - b.minutes);
+    return {
+      route: each.route,
+      heading: each.heading,
+      minutes: each.trains.map((t) => t.minutes).slice(0, MAX_COUNTDOWNS),
+      // the stops still ahead of the train you would actually board
+      ahead: stopsAhead(each.trains[0].arrival),
+    };
+  });
   departures.sort((a, b) =>
     a.minutes[0] - b.minutes[0]
     || compare(a.route, b.route)
@@ -365,6 +395,74 @@ export function disambiguate(views) {
 export function isCatchable(minutes, walk) {
   return minutes >= walk;
 }
+
+/* Gather a station's departures under the line they run on.
+ *
+ * A board sorted purely by which train comes soonest answers "what
+ * leaves first", but at a station you already know which train you
+ * want -- so the F rows sit together, then the M rows.
+ *
+ * Every line at the station is returned -- a station with six lines
+ * gives six groups. The `max` applies within a line: each keeps its
+ * two soonest directions, reports how many it dropped, and carries the
+ * full list so it can unfold.
+ *
+ * Lines are ordered by name rather than by imminence, because a list
+ * that reshuffles itself every thirty seconds cannot be scanned; an
+ * express is sorted next to the local it runs with.
+ */
+export function groupByRoute(departures, max = 2) {
+  const groups = new Map();
+  for (const departure of departures) {
+    const found = groups.get(departure.route);
+    if (found) found.push(departure);
+    else groups.set(departure.route, [departure]);
+  }
+
+  const out = [];
+  for (const [route, found] of groups) {
+    found.sort((a, b) => a.minutes[0] - b.minutes[0]);
+    out.push({
+      route,
+      departures: found.slice(0, max),
+      all: found,                    // every direction, for a line that unfolds
+      hidden: Math.max(0, found.length - max),
+    });
+  }
+  // baseRoute keeps 6X beside 6; the flag breaks the tie after it.
+  out.sort((a, b) =>
+    compare(baseRoute(a.route), baseRoute(b.route))
+    || compare(isExpress(a.route), isExpress(b.route)));
+  return out;
+}
+
+
+/* The stops a train still has to make after this one.
+ *
+ * Arrivals built by hand (in tests, or from a feed that gave us
+ * nothing) carry no trip, and simply have nothing ahead of them.
+ */
+export function stopsAhead(arrival) {
+  if (!arrival || !arrival.trip) return [];
+  return arrival.trip.stops.slice(arrival.at + 1);
+}
+
+/* A lookup from stop ID to station name.
+ *
+ * Realtime stop IDs are the station ID plus an N/S suffix, so one
+ * table answers for both directions.
+ */
+export function stopNames(stations) {
+  const names = new Map();
+  for (const station of stations) names.set(station.stopId, station.name);
+  return names;
+}
+
+export function stopName(names, stopId) {
+  const base = stopId.replace(/[NS]$/, "");
+  return names.get(base) || base;
+}
+
 
 /* == ROUTES ============================================================= */
 
