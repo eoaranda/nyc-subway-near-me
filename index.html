@@ -63,6 +63,15 @@
                 letter-spacing: -.01em; }
   .meta { color: var(--dim); font-size: 15px; margin: 0;
           font-variant-numeric: tabular-nums; }
+  /* Sits right after the walk time, with enough padding around it to be
+     a real target on a phone without looking like a button. */
+  .pin {
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--dim); margin: -12px 0 -12px -4px; padding: 12px;
+    border-radius: 8px; text-decoration: none;
+  }
+  .pin:hover { color: var(--ink); }
+  .pin:active { background: var(--line); }
 
   /* ---- route bullets ---- */
   .bullet {

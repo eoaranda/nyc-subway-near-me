@@ -18,6 +18,7 @@ Live: https://subway.earanda.dev/
 - A time is **green** if you can still walk there in time. Grey means
   you cannot. A train arriving *now* is not useful if the walk is 6 minutes.
 - Tap a row to see every stop that train makes next.
+- Tap the pin next to the walk time to open that station in Google Maps.
 
 ## How to use it
 

@@ -359,10 +359,16 @@ export function stationView(place, arrivals, now) {
 
   const routes = [...new Set(place.stations.flatMap((s) => s.routes))].sort();
 
+  // The nearest platform stands for the whole complex, the way its name
+  // does -- near enough to walk to, and enough to put a pin on a map.
+  const nearest = place.stations[0];
+
   return {
     name: place.name,
     miles: place.miles,
     walk: walkMinutes(place.miles),
+    lat: nearest ? nearest.lat : null,
+    lon: nearest ? nearest.lon : null,
     routes,
     departures,
   };

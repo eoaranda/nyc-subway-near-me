@@ -232,6 +232,29 @@ function departureRow(departure, walk, stationName) {
   return wrap;
 }
 
+/* A pin that opens this station on a map.
+ *
+ * Coordinates rather than a name: "86 St" would drop the pin on any of
+ * six different stations. The station table's position is the entrance
+ * the walk time was measured to.
+ */
+function mapPin(view) {
+  const link = document.createElement("a");
+  link.className = "pin";
+  link.href = "https://www.google.com/maps/search/?api=1&query="
+    + view.lat + "," + view.lon;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.title = "Show " + view.name + " on a map";
+  link.setAttribute("aria-label", link.title);
+  link.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" '
+    + 'fill="none" stroke="currentColor" stroke-width="2" '
+    + 'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    + '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/>'
+    + '<circle cx="12" cy="10" r="2.6"/></svg>';
+  return link;
+}
+
 function stationCard(plan) {
   const { view } = plan;
   const card = document.createElement("section");
@@ -245,6 +268,7 @@ function stationCard(plan) {
   meta.textContent = "\u00b7 " + view.miles.toFixed(2) + " mi \u00b7 "
     + Math.max(1, Math.round(view.walk)) + " min walk";
   head.append(name, meta);
+  if (view.lat !== null && view.lon !== null) head.append(mapPin(view));
   card.append(head);
 
   if (!view.departures.length) {
