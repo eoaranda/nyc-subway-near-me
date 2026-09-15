@@ -37,13 +37,18 @@ Options:
 
 ## Put it online
 
-Upload these 5 files. Nothing else:
+Upload these 10 files. Nothing else:
 
     index.html
     app.js
     core.js
     stations.json
     favicon.ico
+    manifest.webmanifest
+    icon-192.png
+    icon-512.png
+    icon-maskable-512.png
+    apple-touch-icon.png
 
 Any static host works: GitHub Pages, Netlify, Cloudflare, S3.
 
@@ -62,7 +67,15 @@ needs a server.
     app.js            location, network, screen
     core.js           all the logic
     stations.json     496 stations
-    favicon.ico       the icon (16, 32 and 48 pixels)
+    favicon.ico       browser tab icon (16, 32 and 48 pixels)
+
+The rest make it installable as an app:
+
+    manifest.webmanifest   name, colours and icons for Android
+    icon-192.png           home screen icon
+    icon-512.png           splash screen icon
+    icon-maskable-512.png  Android adaptive icon (it crops to a circle)
+    apple-touch-icon.png   home screen icon on iPhone
 
 These are only for development. Do not upload them:
 
@@ -83,6 +96,15 @@ The MTA feeds allow this because they send
 
 It refreshes every 30 seconds. The countdowns update every second. When
 the tab is hidden, it stops.
+
+## Install it on your phone
+
+Open the page, then:
+
+- **Android (Chrome):** menu, then "Install app" or "Add to Home screen".
+- **iPhone (Safari):** Share, then "Add to Home Screen".
+
+It opens with no browser bar, like a normal app.
 
 ## Privacy
 
