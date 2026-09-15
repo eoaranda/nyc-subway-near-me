@@ -5,7 +5,7 @@ A small web page. It shows the next subway trains near you.
 Open it, allow location, and you see the closest stations and when the
 next trains arrive.
 
-Live: https://github.com/eoaranda/nyc-subway-near-me
+Live: https://subway.earanda.dev/
 
 ## What you see
 
@@ -46,13 +46,6 @@ Upload these 5 files. Nothing else:
 
 Any static host works: GitHub Pages, Netlify, Cloudflare, S3.
 
-GitHub Pages and Netlify already give you `https://`, so location
-works with no extra work.
-
-Only one case fails: serving the page over plain `http://`, for example
-from a local IP like `http://192.168.1.5:8000`. The page loads, but the
-browser refuses to give the location. `http://localhost` still works.
-
 ## Run it on your computer
 
     python3 -m http.server 8777
@@ -72,17 +65,8 @@ needs a server.
 
 These are only for development. Do not upload them:
 
-    run-tests         runs the tests
-    test/             the tests
     make-stations.py  rebuilds stations.json
     README.md         this file
-
-## Tests
-
-    ./run-tests
-
-97 tests. They need nothing installed. They run with `jsc`, a small
-JavaScript program that comes with macOS.
 
 ## How it works
 
